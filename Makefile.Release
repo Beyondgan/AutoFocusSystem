@@ -19,7 +19,7 @@ CXXFLAGS      = -nologo -Zc:wchar_t -FS -Zc:rvalueCast -Zc:inline -Zc:strictStri
 INCPATH       = -I. -I..\..\..\Software\QT\5.15.2\msvc2019_64\include -I..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtWidgets -I..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtGui -I..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtANGLE -I..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtSerialPort -I..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore -Irelease -I. -I/include -I..\..\..\Software\QT\5.15.2\msvc2019_64\mkspecs\win32-msvc 
 LINKER        = link
 LFLAGS        = /NOLOGO /DYNAMICBASE /NXCOMPAT /OPT:REF /INCREMENTAL:NO /SUBSYSTEM:WINDOWS "/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' publicKeyToken='6595b64144ccf1df' language='*' processorArchitecture='*'"
-LIBS          = D:\Software\QT\5.15.2\msvc2019_64\lib\Qt5Widgets.lib D:\Software\QT\5.15.2\msvc2019_64\lib\Qt5Gui.lib D:\Software\QT\5.15.2\msvc2019_64\lib\Qt5SerialPort.lib D:\Software\QT\5.15.2\msvc2019_64\lib\Qt5Core.lib  D:\Software\QT\5.15.2\msvc2019_64\lib\qtmain.lib /LIBPATH:C:\openssl\lib /LIBPATH:C:\Utils\my_sql\mysql-5.7.25-winx64\lib /LIBPATH:C:\Utils\postgresql\pgsql\lib shell32.lib 
+LIBS          = /LIBPATH:FMC4030\lib FMC4030\lib\FMC4030-Dll.lib D:\Software\QT\5.15.2\msvc2019_64\lib\Qt5Widgets.lib D:\Software\QT\5.15.2\msvc2019_64\lib\Qt5Gui.lib D:\Software\QT\5.15.2\msvc2019_64\lib\Qt5SerialPort.lib D:\Software\QT\5.15.2\msvc2019_64\lib\Qt5Core.lib  D:\Software\QT\5.15.2\msvc2019_64\lib\qtmain.lib /LIBPATH:C:\openssl\lib /LIBPATH:C:\Utils\my_sql\mysql-5.7.25-winx64\lib /LIBPATH:C:\Utils\postgresql\pgsql\lib shell32.lib 
 QMAKE         = D:\Software\QT\5.15.2\msvc2019_64\bin\qmake.exe
 DEL_FILE      = del
 CHK_DIR_EXISTS= if not exist
@@ -298,6 +298,7 @@ release\moc_mainwindow.cpp: mainwindow.h \
 		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\qtimer.h \
 		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\qbasictimer.h \
 		axiscontroller.h \
+		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\QString \
 		liquidlenscontroller.h \
 		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\QMap \
 		workflowengine.h \
@@ -432,14 +433,7 @@ release\moc_axiscontroller.cpp: axiscontroller.h \
 		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\QTimer \
 		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\qtimer.h \
 		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\qbasictimer.h \
-		serialmanager.h \
-		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtSerialPort\QSerialPort \
-		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtSerialPort\qserialport.h \
-		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\qiodevice.h \
-		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtSerialPort\qserialportglobal.h \
-		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtSerialPort\QSerialPortInfo \
-		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtSerialPort\qserialportinfo.h \
-		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\QByteArray \
+		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\QString \
 		release\moc_predefs.h \
 		..\..\..\Software\QT\5.15.2\msvc2019_64\bin\moc.exe
 	D:\Software\QT\5.15.2\msvc2019_64\bin\moc.exe $(DEFINES) --compiler-flavor=msvc --include D:/QT-Data/AI_Data/byd-1/release/moc_predefs.h -ID:/Software/QT/5.15.2/msvc2019_64/mkspecs/win32-msvc -ID:/QT-Data/AI_Data/byd-1 -ID:/Software/QT/5.15.2/msvc2019_64/include -ID:/Software/QT/5.15.2/msvc2019_64/include/QtWidgets -ID:/Software/QT/5.15.2/msvc2019_64/include/QtGui -ID:/Software/QT/5.15.2/msvc2019_64/include/QtANGLE -ID:/Software/QT/5.15.2/msvc2019_64/include/QtSerialPort -ID:/Software/QT/5.15.2/msvc2019_64/include/QtCore -I"C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30133\ATLMFC\include" -I"C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Tools\MSVC\14.29.30133\include" -I"C:\Program Files (x86)\Windows Kits\NETFXSDK\4.8\include\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.26100.0\ucrt" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.26100.0\shared" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.26100.0\um" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.26100.0\winrt" -I"C:\Program Files (x86)\Windows Kits\10\include\10.0.26100.0\cppwinrt" axiscontroller.h -o release\moc_axiscontroller.cpp
@@ -593,6 +587,7 @@ release\moc_workflowengine.cpp: workflowengine.h \
 		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtSerialPort\qserialportinfo.h \
 		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\QByteArray \
 		axiscontroller.h \
+		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\QString \
 		liquidlenscontroller.h \
 		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\QMap \
 		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\qmap.h \
@@ -752,6 +747,7 @@ release\main.obj: main.cpp mainwindow.h \
 		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\qtimer.h \
 		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\qbasictimer.h \
 		axiscontroller.h \
+		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\QString \
 		liquidlenscontroller.h \
 		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\QMap \
 		workflowengine.h \
@@ -884,6 +880,7 @@ release\mainwindow.obj: mainwindow.cpp mainwindow.h \
 		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\qtimer.h \
 		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\qbasictimer.h \
 		axiscontroller.h \
+		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\QString \
 		liquidlenscontroller.h \
 		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\QMap \
 		workflowengine.h \
@@ -1097,19 +1094,13 @@ release\axiscontroller.obj: axiscontroller.cpp axiscontroller.h \
 		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\QTimer \
 		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\qtimer.h \
 		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\qbasictimer.h \
-		serialmanager.h \
-		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtSerialPort\QSerialPort \
-		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtSerialPort\qserialport.h \
-		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\qiodevice.h \
-		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtSerialPort\qserialportglobal.h \
-		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtSerialPort\QSerialPortInfo \
-		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtSerialPort\qserialportinfo.h \
-		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\QByteArray \
+		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\QString \
 		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\QDebug \
 		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\qdebug.h \
 		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\qhash.h \
 		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\qmap.h \
 		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\qtextstream.h \
+		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\qiodevice.h \
 		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\qlocale.h \
 		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\qvariant.h \
 		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\qshareddata.h \
@@ -1267,6 +1258,7 @@ release\workflowengine.obj: workflowengine.cpp workflowengine.h \
 		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtSerialPort\qserialportinfo.h \
 		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\QByteArray \
 		axiscontroller.h \
+		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\QString \
 		liquidlenscontroller.h \
 		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\QMap \
 		..\..\..\Software\QT\5.15.2\msvc2019_64\include\QtCore\qmap.h \
