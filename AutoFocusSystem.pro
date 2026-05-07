@@ -11,6 +11,8 @@ msvc {
     QMAKE_CFLAGS += /utf-8
 }
 
+LIBS += -LFMC4030/lib -lFMC4030-Dll
+
 SOURCES += \
     main.cpp \
     mainwindow.cpp \

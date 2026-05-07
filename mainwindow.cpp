@@ -10,7 +10,7 @@ MainWindow::MainWindow(QWidget *parent)
     , ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    setWindowTitle(tr("自动对焦控制系统"));
+    setWindowTitle(tr("Auto Focus System"));
 
     m_laserSensor = new SerialManager(SerialManager::LaserSensor, this);
     m_axisController = new AxisController(this);
@@ -33,27 +33,29 @@ MainWindow::~MainWindow()
 
 void MainWindow::initUi()
 {
-    ui->laserStatusLabel->setText(tr("未连接"));
+    ui->laserStatusLabel->setText(tr("Disconnected"));
     ui->laserStatusLabel->setStyleSheet("color: red; font-weight: bold;");
-    ui->lensStatusLabel->setText(tr("未连接"));
+    ui->lensStatusLabel->setText(tr("Disconnected"));
     ui->lensStatusLabel->setStyleSheet("color: red; font-weight: bold;");
-    ui->axisStatusLabel->setText(tr("未连接"));
+    ui->axisStatusLabel->setText(tr("Disconnected"));
     ui->axisStatusLabel->setStyleSheet("color: red; font-weight: bold;");
 
     ui->axisSpeedSlider->setRange(1, 500);
-    ui->axisSpeedSlider->setValue(100);
-    ui->axisSpeedLabel->setText("100 mm/s");
+    ui->axisSpeedSlider->setValue(10);
+    ui->axisSpeedLabel->setText("10 mm/s");
 
     ui->lensFocusSlider->setRange(0, 1023);
     ui->lensFocusSlider->setValue(0);
     ui->lensFocusValueLabel->setText("0");
 
     ui->scanProgressBar->setValue(0);
-    ui->workflowStateLabel->setText(tr("停止"));
+    ui->workflowStateLabel->setText(tr("Stopped"));
 
     ui->distanceDisplay->setText("-- mm");
     ui->focusDisplay->setText("--");
-    ui->axisPosDisplay->setText("-- mm");
+    ui->axisXDisplay->setText("X: --");
+    ui->axisYDisplay->setText("Y: --");
+    ui->axisZDisplay->setText("Z: --");
 
     QMap<double, int> defaultCalibration;
     defaultCalibration[50.0] = 0;
@@ -96,7 +98,7 @@ void MainWindow::initConnections()
     connect(m_workflow, &WorkflowEngine::progressChanged, this, &MainWindow::onProgressChanged);
     connect(m_workflow, &WorkflowEngine::logMessage, this, &MainWindow::onLogMessage);
     connect(m_workflow, &WorkflowEngine::errorOccurred, this, [this](const QString &err) {
-        appendLog(tr("[错误] %1").arg(err));
+        appendLog(tr("[Error] %1").arg(err));
     });
 
     connect(m_laserSensor, &SerialManager::dataReceived, this, &MainWindow::onLaserDataReceived);
@@ -105,15 +107,14 @@ void MainWindow::initConnections()
         updateConnectionStatus();
     });
 
-    connect(m_axisController, &AxisController::positionChanged, this, [this](double pos) {
-        ui->axisPosDisplay->setText(QString("%1 mm").arg(pos, 0, 'f', 2));
-    });
+    connect(m_axisController, &AxisController::statusUpdated, this, &MainWindow::onAxisStatusUpdated);
     connect(m_axisController, &AxisController::stateChanged, this, [this](AxisController::AxisState state) {
         ui->axisStateLabel->setText(
-            state == AxisController::Idle ? tr("空闲") :
-            state == AxisController::Moving ? tr("运动中") :
-            state == AxisController::Homing ? tr("回零中") :
-            state == AxisController::Error ? tr("错误") : tr("未知"));
+            state == AxisController::Idle ? tr("Idle") :
+            state == AxisController::Moving ? tr("Moving") :
+            state == AxisController::Homing ? tr("Homing") :
+            state == AxisController::Error ? tr("Error") :
+            state == AxisController::Disconnected ? tr("Disconnected") : tr("Unknown"));
     });
 
     connect(m_lensController, &LiquidLensController::focusChanged, this, [this](int val) {
@@ -131,12 +132,12 @@ void MainWindow::onConnectLaser()
 {
     QString port = ui->laserPortCombo->currentText();
     if (port.isEmpty()) {
-        QMessageBox::warning(this, tr("警告"), tr("请选择激光传感器串口"));
+        QMessageBox::warning(this, tr("Warning"), tr("Please select laser sensor port"));
         return;
     }
     qint32 baud = ui->laserBaudCombo->currentText().toInt();
     if (m_laserSensor->open(port, baud)) {
-        appendLog(tr("激光传感器已连接: %1").arg(port));
+        appendLog(tr("Laser sensor connected: %1").arg(port));
     }
     updateConnectionStatus();
 }
@@ -144,7 +145,7 @@ void MainWindow::onConnectLaser()
 void MainWindow::onDisconnectLaser()
 {
     m_laserSensor->close();
-    appendLog(tr("激光传感器已断开"));
+    appendLog(tr("Laser sensor disconnected"));
     updateConnectionStatus();
 }
 
@@ -152,12 +153,12 @@ void MainWindow::onConnectLens()
 {
     QString port = ui->lensPortCombo->currentText();
     if (port.isEmpty()) {
-        QMessageBox::warning(this, tr("警告"), tr("请选择液态镜头串口"));
+        QMessageBox::warning(this, tr("Warning"), tr("Please select liquid lens port"));
         return;
     }
     qint32 baud = ui->lensBaudCombo->currentText().toInt();
     if (m_lensController->connectLens(port, baud)) {
-        appendLog(tr("液态镜头已连接: %1").arg(port));
+        appendLog(tr("Liquid lens connected: %1").arg(port));
     }
     updateConnectionStatus();
 }
@@ -165,20 +166,24 @@ void MainWindow::onConnectLens()
 void MainWindow::onDisconnectLens()
 {
     m_lensController->disconnectLens();
-    appendLog(tr("液态镜头已断开"));
+    appendLog(tr("Liquid lens disconnected"));
     updateConnectionStatus();
 }
 
 void MainWindow::onConnectAxis()
 {
-    QString port = ui->axisPortCombo->currentText();
-    if (port.isEmpty()) {
-        QMessageBox::warning(this, tr("警告"), tr("请选择运动轴串口"));
+    QString ip = ui->axisIpEdit->text().trimmed();
+    int port = ui->axisPortSpin->value();
+
+    if (ip.isEmpty()) {
+        QMessageBox::warning(this, tr("Warning"), tr("Please enter axis controller IP"));
         return;
     }
-    qint32 baud = ui->axisBaudCombo->currentText().toInt();
-    if (m_axisController->connectAxis(port, baud)) {
-        appendLog(tr("运动轴已连接: %1").arg(port));
+
+    if (m_axisController->connectAxis(ip, port)) {
+        appendLog(tr("FMC4030 connected: %1:%2").arg(ip).arg(port));
+    } else {
+        QMessageBox::warning(this, tr("Error"), tr("Failed to connect to FMC4030"));
     }
     updateConnectionStatus();
 }
@@ -186,27 +191,30 @@ void MainWindow::onConnectAxis()
 void MainWindow::onDisconnectAxis()
 {
     m_axisController->disconnectAxis();
-    appendLog(tr("运动轴已断开"));
+    appendLog(tr("FMC4030 disconnected"));
     updateConnectionStatus();
 }
 
 void MainWindow::onAxisMoveTo()
 {
     double pos = ui->axisPosSpin->value();
-    m_axisController->moveToPosition(pos);
-    appendLog(tr("移动到位置: %1 mm").arg(pos, 0, 'f', 2));
+    int axis = ui->axisSelectCombo->currentIndex();
+    m_axisController->moveToPosition(pos, axis);
+    appendLog(tr("Move axis %1 to %2 mm").arg(axis).arg(pos, 0, 'f', 2));
 }
 
 void MainWindow::onAxisHome()
 {
-    m_axisController->home();
-    appendLog(tr("轴回零"));
+    int axis = ui->axisSelectCombo->currentIndex();
+    m_axisController->home(axis);
+    appendLog(tr("Home axis %1").arg(axis));
 }
 
 void MainWindow::onAxisStop()
 {
-    m_axisController->stop();
-    appendLog(tr("轴停止"));
+    int axis = ui->axisSelectCombo->currentIndex();
+    m_axisController->stop(axis);
+    appendLog(tr("Stop axis %1").arg(axis));
 }
 
 void MainWindow::onAxisSpeedChanged(int value)
@@ -223,13 +231,13 @@ void MainWindow::onLensFocusChanged(int value)
 void MainWindow::onLensCalibrate()
 {
     bool ok1 = false, ok2 = false;
-    double dist = QInputDialog::getDouble(this, tr("标定"), tr("距离 (mm):"), 100, 0, 9999, 2, &ok1);
+    double dist = QInputDialog::getDouble(this, tr("Calibrate"), tr("Distance (mm):"), 100, 0, 9999, 2, &ok1);
     if (!ok1) return;
-    int focus = QInputDialog::getInt(this, tr("标定"), tr("焦距值:"), 512, 0, 1023, 1, &ok2);
+    int focus = QInputDialog::getInt(this, tr("Calibrate"), tr("Focus value:"), 512, 0, 1023, 1, &ok2);
     if (!ok2) return;
 
     m_lensController->addCalibrationPoint(dist, focus);
-    appendLog(tr("添加标定点: 距离=%1mm, 焦距=%2").arg(dist, 0, 'f', 1).arg(focus));
+    appendLog(tr("Calibration point added: dist=%1mm, focus=%2").arg(dist, 0, 'f', 1).arg(focus));
 }
 
 void MainWindow::onSingleMeasure()
@@ -244,7 +252,7 @@ void MainWindow::onStartScan()
     double step = ui->scanStepSpin->value();
 
     if (step <= 0) {
-        QMessageBox::warning(this, tr("警告"), tr("步进值必须大于0"));
+        QMessageBox::warning(this, tr("Warning"), tr("Step size must be greater than 0"));
         return;
     }
 
@@ -254,29 +262,32 @@ void MainWindow::onStartScan()
 void MainWindow::onPauseScan()
 {
     m_workflow->pause();
+    m_axisController->pause();
 }
 
 void MainWindow::onResumeScan()
 {
     m_workflow->resume();
+    m_axisController->resume();
 }
 
 void MainWindow::onStopScan()
 {
     m_workflow->stop();
+    m_axisController->stopAll();
 }
 
 void MainWindow::onWorkflowStateChanged(WorkflowEngine::WorkflowState state)
 {
     QString stateStr;
     switch (state) {
-    case WorkflowEngine::Stopped: stateStr = tr("停止"); break;
-    case WorkflowEngine::Initializing: stateStr = tr("初始化"); break;
-    case WorkflowEngine::WaitingForAxis: stateStr = tr("等待轴到位"); break;
-    case WorkflowEngine::Measuring: stateStr = tr("测量中"); break;
-    case WorkflowEngine::AdjustingFocus: stateStr = tr("调焦中"); break;
-    case WorkflowEngine::Paused: stateStr = tr("已暂停"); break;
-    case WorkflowEngine::Error: stateStr = tr("错误"); break;
+    case WorkflowEngine::Stopped: stateStr = tr("Stopped"); break;
+    case WorkflowEngine::Initializing: stateStr = tr("Initializing"); break;
+    case WorkflowEngine::WaitingForAxis: stateStr = tr("Waiting Axis"); break;
+    case WorkflowEngine::Measuring: stateStr = tr("Measuring"); break;
+    case WorkflowEngine::AdjustingFocus: stateStr = tr("Focusing"); break;
+    case WorkflowEngine::Paused: stateStr = tr("Paused"); break;
+    case WorkflowEngine::Error: stateStr = tr("Error"); break;
     }
     ui->workflowStateLabel->setText(stateStr);
 }
@@ -300,7 +311,7 @@ void MainWindow::onScanPointCompleted(const WorkflowEngine::ScanPoint &point)
 
 void MainWindow::onScanFinished()
 {
-    appendLog(tr("扫描完成"));
+    appendLog(tr("Scan completed"));
 }
 
 void MainWindow::onProgressChanged(int current, int total)
@@ -326,42 +337,47 @@ void MainWindow::onLaserDataReceived(const QByteArray &data)
     }
 }
 
+void MainWindow::onAxisStatusUpdated(float x, float y, float z)
+{
+    ui->axisXDisplay->setText(QString("X: %1").arg(x, 0, 'f', 2));
+    ui->axisYDisplay->setText(QString("Y: %1").arg(y, 0, 'f', 2));
+    ui->axisZDisplay->setText(QString("Z: %1").arg(z, 0, 'f', 2));
+}
+
 void MainWindow::updatePortComboBoxes()
 {
     QStringList ports = SerialManager::availablePorts();
 
     ui->laserPortCombo->clear();
     ui->lensPortCombo->clear();
-    ui->axisPortCombo->clear();
 
     ui->laserPortCombo->addItems(ports);
     ui->lensPortCombo->addItems(ports);
-    ui->axisPortCombo->addItems(ports);
 }
 
 void MainWindow::updateConnectionStatus()
 {
     if (m_laserSensor->isOpen()) {
-        ui->laserStatusLabel->setText(tr("已连接"));
+        ui->laserStatusLabel->setText(tr("Connected"));
         ui->laserStatusLabel->setStyleSheet("color: green; font-weight: bold;");
     } else {
-        ui->laserStatusLabel->setText(tr("未连接"));
+        ui->laserStatusLabel->setText(tr("Disconnected"));
         ui->laserStatusLabel->setStyleSheet("color: red; font-weight: bold;");
     }
 
     if (m_lensController->isConnected()) {
-        ui->lensStatusLabel->setText(tr("已连接"));
+        ui->lensStatusLabel->setText(tr("Connected"));
         ui->lensStatusLabel->setStyleSheet("color: green; font-weight: bold;");
     } else {
-        ui->lensStatusLabel->setText(tr("未连接"));
+        ui->lensStatusLabel->setText(tr("Disconnected"));
         ui->lensStatusLabel->setStyleSheet("color: red; font-weight: bold;");
     }
 
     if (m_axisController->isConnected()) {
-        ui->axisStatusLabel->setText(tr("已连接"));
+        ui->axisStatusLabel->setText(tr("Connected"));
         ui->axisStatusLabel->setStyleSheet("color: green; font-weight: bold;");
     } else {
-        ui->axisStatusLabel->setText(tr("未连接"));
+        ui->axisStatusLabel->setText(tr("Disconnected"));
         ui->axisStatusLabel->setStyleSheet("color: red; font-weight: bold;");
     }
 }

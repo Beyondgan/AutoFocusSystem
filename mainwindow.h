@@ -51,6 +51,7 @@ private slots:
     void onLogMessage(const QString &msg);
 
     void onLaserDataReceived(const QByteArray &data);
+    void onAxisStatusUpdated(float x, float y, float z);
 
 private:
     void initUi();
@@ -67,4 +68,4 @@ private:
     WorkflowEngine *m_workflow;
 };
 
-#endif // MAINWINDOW_H
+#endif

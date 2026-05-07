@@ -15,6 +15,7 @@ WorkflowEngine::WorkflowEngine(QObject *parent)
     , m_continuousMode(false)
     , m_lastDistance(0.0)
     , m_currentAxisPos(0.0)
+    , m_scanAxis(0)
     , m_pendingDistance(0.0)
 {
     m_measureTimer = new QTimer(this);
@@ -61,14 +62,14 @@ void WorkflowEngine::setLiquidLens(LiquidLensController *lens)
 void WorkflowEngine::startSinglePoint()
 {
     if (!m_laserSensor || !m_laserSensor->isOpen()) {
-        emit errorOccurred(tr("激光传感器未连接"));
+        emit errorOccurred(tr("Laser sensor not connected"));
         return;
     }
 
     m_continuousMode = false;
     m_scanPositions.clear();
     setState(Measuring);
-    emit logMessage(tr("单点测量开始"));
+    emit logMessage(tr("Single point measure started"));
 
     requestMeasurement();
 }
@@ -77,7 +78,7 @@ void WorkflowEngine::startContinuousScan(double startPos, double endPos, double 
 {
     QList<double> positions;
     if (stepSize <= 0) {
-        emit errorOccurred(tr("步进值必须大于0"));
+        emit errorOccurred(tr("Step size must be greater than 0"));
         return;
     }
 
@@ -100,15 +101,15 @@ void WorkflowEngine::startContinuousScan(double startPos, double endPos, double 
 void WorkflowEngine::startContinuousScan(const QList<double> &positions)
 {
     if (!m_laserSensor || !m_laserSensor->isOpen()) {
-        emit errorOccurred(tr("激光传感器未连接"));
+        emit errorOccurred(tr("Laser sensor not connected"));
         return;
     }
     if (!m_axis || !m_axis->isConnected()) {
-        emit errorOccurred(tr("运动轴未连接"));
+        emit errorOccurred(tr("FMC4030 not connected"));
         return;
     }
     if (positions.isEmpty()) {
-        emit errorOccurred(tr("扫描点位列表为空"));
+        emit errorOccurred(tr("Scan position list is empty"));
         return;
     }
 
@@ -122,7 +123,7 @@ void WorkflowEngine::startContinuousScan(const QList<double> &positions)
     m_results.clear();
 
     setState(WaitingForAxis);
-    emit logMessage(tr("连续扫描开始，共 %1 个点位").arg(m_totalPoints));
+    emit logMessage(tr("Continuous scan started, total %1 points").arg(m_totalPoints));
 
     processNextPoint();
 }
@@ -132,8 +133,8 @@ void WorkflowEngine::pause()
     if (m_state == WaitingForAxis || m_state == Measuring || m_state == AdjustingFocus) {
         setState(Paused);
         m_measureTimer->stop();
-        if (m_axis) m_axis->stop();
-        emit logMessage(tr("工作流已暂停"));
+        if (m_axis) m_axis->pause();
+        emit logMessage(tr("Workflow paused"));
     }
 }
 
@@ -141,7 +142,7 @@ void WorkflowEngine::resume()
 {
     if (m_state == Paused) {
         setState(WaitingForAxis);
-        emit logMessage(tr("工作流已恢复"));
+        emit logMessage(tr("Workflow resumed"));
         processNextPoint();
     }
 }
@@ -150,9 +151,9 @@ void WorkflowEngine::stop()
 {
     m_measureTimer->stop();
     m_scanPositions.clear();
-    if (m_axis) m_axis->stop();
+    if (m_axis) m_axis->stopAll();
     setState(Stopped);
-    emit logMessage(tr("工作流已停止"));
+    emit logMessage(tr("Workflow stopped"));
 }
 
 WorkflowEngine::WorkflowState WorkflowEngine::state() const
@@ -180,6 +181,11 @@ void WorkflowEngine::setAutoFocusEnabled(bool enabled)
     m_autoFocusEnabled = enabled;
 }
 
+void WorkflowEngine::setScanAxis(int axis)
+{
+    m_scanAxis = axis;
+}
+
 void WorkflowEngine::onSensorDataReceived(const QByteArray &data)
 {
     if (m_state != Measuring) return;
@@ -197,7 +203,7 @@ void WorkflowEngine::onSensorDataReceived(const QByteArray &data)
     }
 
     emit distanceMeasured(distance, focusValue);
-    emit logMessage(tr("测量距离: %1 mm, 焦距值: %2").arg(distance, 0, 'f', 2).arg(focusValue));
+    emit logMessage(tr("Distance: %1 mm, Focus: %2").arg(distance, 0, 'f', 2).arg(focusValue));
 
     if (m_continuousMode) {
         ScanPoint point;
@@ -213,7 +219,7 @@ void WorkflowEngine::onSensorDataReceived(const QByteArray &data)
         if (m_scanPositions.isEmpty()) {
             setState(Stopped);
             emit scanFinished();
-            emit logMessage(tr("连续扫描完成，共 %1 个点位").arg(m_results.size()));
+            emit logMessage(tr("Continuous scan completed, total %1 points").arg(m_results.size()));
         } else {
             setState(WaitingForAxis);
             processNextPoint();
@@ -227,27 +233,29 @@ void WorkflowEngine::onSensorDataReceived(const QByteArray &data)
         emit scanPointCompleted(point);
 
         setState(Stopped);
-        emit logMessage(tr("单点测量完成"));
+        emit logMessage(tr("Single point measure completed"));
     }
 }
 
-void WorkflowEngine::onAxisMoveFinished(bool success)
+void WorkflowEngine::onAxisMoveFinished(bool success, int axis)
 {
+    Q_UNUSED(axis)
     if (m_state != WaitingForAxis) return;
 
     if (!success) {
         setState(Error);
-        emit errorOccurred(tr("轴运动失败"));
+        emit errorOccurred(tr("Axis move failed"));
         return;
     }
 
-    emit logMessage(tr("轴运动到位，开始测量"));
+    emit logMessage(tr("Axis move completed, start measuring"));
     setState(Measuring);
     requestMeasurement();
 }
 
-void WorkflowEngine::onAxisPositionChanged(double position)
+void WorkflowEngine::onAxisPositionChanged(double position, int axis)
 {
+    Q_UNUSED(axis)
     m_currentAxisPos = position;
 }
 
@@ -255,7 +263,7 @@ void WorkflowEngine::onMeasureTimeout()
 {
     if (m_state != Measuring) return;
 
-    emit logMessage(tr("测量超时，重试中..."));
+    emit logMessage(tr("Measure timeout, retrying..."));
     requestMeasurement();
 }
 
@@ -272,10 +280,10 @@ void WorkflowEngine::processNextPoint()
     if (m_scanPositions.isEmpty()) return;
 
     double targetPos = m_scanPositions.dequeue();
-    emit logMessage(tr("移动到位置: %1 mm").arg(targetPos, 0, 'f', 2));
+    emit logMessage(tr("Moving to position: %1 mm").arg(targetPos, 0, 'f', 2));
 
     if (m_axis) {
-        m_axis->moveToPosition(targetPos);
+        m_axis->moveToPosition(targetPos, m_scanAxis);
     }
 }
 

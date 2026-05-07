@@ -50,6 +50,7 @@ public:
 
     void setMeasureDelay(int msec);
     void setAutoFocusEnabled(bool enabled);
+    void setScanAxis(int axis);
 
 signals:
     void stateChanged(WorkflowState state);
@@ -62,8 +63,8 @@ signals:
 
 private slots:
     void onSensorDataReceived(const QByteArray &data);
-    void onAxisMoveFinished(bool success);
-    void onAxisPositionChanged(double position);
+    void onAxisMoveFinished(bool success, int axis);
+    void onAxisPositionChanged(double position, int axis);
     void onMeasureTimeout();
 
 private:
@@ -88,8 +89,9 @@ private:
     bool m_continuousMode;
     double m_lastDistance;
     double m_currentAxisPos;
+    int m_scanAxis;
 
     double m_pendingDistance;
 };
 
-#endif // WORKFLOWENGINE_H
+#endif
