@@ -1,0 +1,31 @@
+# Build directories
+build/
+*.user
+*.user.*
+*.autosave
+
+# Qt specific
+*.moc/
+.moc/
+release/
+debug/
+ui_*.h
+qrc_*.cpp
+
+# IDE files
+.vscode/
+.idea/
+*.pro.user
+*.pro.user.*
+*.sln.docstates
+
+# Compiled files
+*.o
+*.obj
+*.exe
+*.dll
+*.pdb
+
+# Clangd cache
+.qtc_clangd/
+compile_commands.json
