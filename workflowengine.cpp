@@ -325,61 +325,51 @@ void WorkflowEngine::setScanAxis(int axis)
  */
 void WorkflowEngine::onSensorDataReceived(const QByteArray &data)
 {
-    // 只在测量状态处理数据
     if (m_state != Measuring) return;
 
-    // 解析距离值
     double distance = parseDistance(data);
-
-    // 解析失败则忽略
     if (distance < 0) return;
 
-    // 保存距离值
     m_lastDistance = distance;
     m_pendingDistance = distance;
 
-    // 计算焦距值
     int focusValue = 0;
     if (m_autoFocusEnabled && m_lens && m_lens->isConnected()) {
-        // 根据距离自动设置焦距
-        m_lens->setFocusByDistance(distance);
+        double offset = m_lens->offset();
+        double actualDistance = distance + offset;
+        m_lens->setFocusByDistance(actualDistance);
         focusValue = m_lens->currentFocusValue();
+        emit logMessage(tr("传感器距离: %1 mm, 轴位置: %2 mm, 偏移: %3 mm, 实际距离: %4 mm, 焦距值: %5")
+            .arg(distance, 0, 'f', 2)
+            .arg(m_currentAxisPos, 0, 'f', 2)
+            .arg(offset, 0, 'f', 2)
+            .arg(actualDistance, 0, 'f', 2)
+            .arg(focusValue));
     }
 
-    // 发送距离测量完成信号
     emit distanceMeasured(distance, focusValue);
 
-    // 发送日志
-    emit logMessage(tr("测量距离: %1 mm, 焦距值: %2").arg(distance, 0, 'f', 2).arg(focusValue));
-
-    // 根据模式处理
     if (m_continuousMode) {
-        // 连续扫描模式
         ScanPoint point;
         point.position = m_currentAxisPos;
         point.measuredDistance = distance;
         point.focusValue = focusValue;
         m_results.append(point);
 
-        // 发送扫描点完成信号
         emit scanPointCompleted(point);
 
-        // 更新进度
         m_currentIndex++;
         emit progressChanged(m_currentIndex, m_totalPoints);
 
-        // 检查是否完成
         if (m_scanPositions.isEmpty()) {
             setState(Stopped);
             emit scanFinished();
             emit logMessage(tr("连续扫描完成，共 %1 个点位").arg(m_results.size()));
         } else {
-            // 处理下一个点
             setState(WaitingForAxis);
             processNextPoint();
         }
     } else {
-        // 单点测量模式
         ScanPoint point;
         point.position = m_currentAxisPos;
         point.measuredDistance = distance;

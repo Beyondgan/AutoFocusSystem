@@ -124,6 +124,9 @@ void MainWindow::initUi()
     defaultCalibration[900.0] = 900;   // 900mm距离对应焦距900
     defaultCalibration[1000.0] = 1023;  // 1000mm距离对应焦距1023
     m_lensController->loadCalibration(defaultCalibration);
+
+    // 默认偏移量
+    ui->lensOffsetSpin->setValue(0.0);
 }
 
 /**
@@ -171,6 +174,8 @@ void MainWindow::initConnections()
             this, &MainWindow::onLensFocusChanged);
     connect(ui->lensCalibrateBtn, &QPushButton::clicked,
             this, &MainWindow::onLensCalibrate);
+    connect(ui->lensOffsetSpin, qOverload<double>(&QDoubleSpinBox::valueChanged),
+            this, &MainWindow::onLensOffsetChanged);
 
     // ============ 工作流控制按钮 ============
     connect(ui->singleMeasureBtn, &QPushButton::clicked,
@@ -497,6 +502,12 @@ void MainWindow::onLensCalibrate()
 
     // 记录日志
     appendLog(tr("添加标定点: 距离=%1mm, 焦距=%2").arg(dist, 0, 'f', 1).arg(focus));
+}
+
+void MainWindow::onLensOffsetChanged(double value)
+{
+    m_lensController->setOffset(value);
+    appendLog(tr("传感器偏移量设置为: %1 mm").arg(value, 0, 'f', 2));
 }
 
 /**

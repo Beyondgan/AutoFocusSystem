@@ -134,6 +134,18 @@ public:
      */
     int distanceToFocus(double distanceMm) const;
 
+    /**
+     * @brief 设置传感器到镜头的距离偏移
+     * @param offset 偏移量（毫米），正值表示镜头在传感器前方
+     */
+    void setOffset(double offset);
+
+    /**
+     * @brief 获取传感器到镜头的距离偏移
+     * @return 偏移量
+     */
+    double offset() const;
+
 signals:
     /**
      * @brief 焦距改变信号
@@ -198,6 +210,9 @@ private:
 
     /** @brief 标定曲线（距离 -> 焦距） */
     QMap<double, int> m_calibration;
+
+    /** @brief 传感器到镜头的距离偏移（毫米） */
+    double m_offset;
 };
 
 #endif

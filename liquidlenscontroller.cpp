@@ -17,6 +17,7 @@ LiquidLensController::LiquidLensController(QObject *parent)
     , m_currentDistance(0.0)
     , m_minFocus(0)
     , m_maxFocus(1023)
+    , m_offset(0.0)
 {
     // 创建串口管理器
     m_serial = new SerialManager(SerialManager::LiquidLens, this);
@@ -267,4 +268,14 @@ void LiquidLensController::onLensError(const QString &error)
 QByteArray LiquidLensController::buildLensCommand(int focusValue)
 {
     return QString("FOCUS %1\r\n").arg(focusValue).toUtf8();
+}
+
+void LiquidLensController::setOffset(double offset)
+{
+    m_offset = offset;
+}
+
+double LiquidLensController::offset() const
+{
+    return m_offset;
 }

@@ -121,6 +121,12 @@ private slots:
      */
     void onLensCalibrate();
 
+    /**
+     * @brief 偏移量改变
+     * @param value 新的偏移量值
+     */
+    void onLensOffsetChanged(double value);
+
     // ============ 工作流相关槽函数 ============
 
     /**
