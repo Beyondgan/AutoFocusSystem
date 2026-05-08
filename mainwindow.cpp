@@ -176,6 +176,8 @@ void MainWindow::initConnections()
             this, &MainWindow::onLensCalibrate);
     connect(ui->lensOffsetSpin, qOverload<double>(&QDoubleSpinBox::valueChanged),
             this, &MainWindow::onLensOffsetChanged);
+    connect(ui->lensFreqSpin, qOverload<int>(&QSpinBox::valueChanged),
+            this, &MainWindow::onLensFreqChanged);
 
     // ============ 工作流控制按钮 ============
     connect(ui->singleMeasureBtn, &QPushButton::clicked,
@@ -508,6 +510,11 @@ void MainWindow::onLensOffsetChanged(double value)
 {
     m_lensController->setOffset(value);
     appendLog(tr("传感器偏移量设置为: %1 mm").arg(value, 0, 'f', 2));
+}
+
+void MainWindow::onLensFreqChanged(int value)
+{
+    m_workflow->setLensAdjustInterval(value);
 }
 
 /**

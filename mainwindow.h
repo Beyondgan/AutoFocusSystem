@@ -127,6 +127,12 @@ private slots:
      */
     void onLensOffsetChanged(double value);
 
+    /**
+     * @brief 镜头调节频率改变
+     * @param value 新的调节间隔（毫秒）
+     */
+    void onLensFreqChanged(int value);
+
     // ============ 工作流相关槽函数 ============
 
     /**

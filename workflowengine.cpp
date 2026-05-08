@@ -33,11 +33,16 @@ WorkflowEngine::WorkflowEngine(QObject *parent)
     , m_currentAxisPos(0.0)
     , m_scanAxis(0)
     , m_pendingDistance(0.0)
+    , m_lensAdjustInterval(0)
+    , m_latestSensorDistance(0.0)
 {
-    // 创建测量定时器（单次触发）
     m_measureTimer = new QTimer(this);
     m_measureTimer->setSingleShot(true);
     connect(m_measureTimer, &QTimer::timeout, this, &WorkflowEngine::onMeasureTimeout);
+
+    m_lensAdjustTimer = new QTimer(this);
+    m_lensAdjustTimer->setSingleShot(true);
+    connect(m_lensAdjustTimer, &QTimer::timeout, this, &WorkflowEngine::onLensAdjustTimeout);
 }
 
 /**
@@ -317,6 +322,44 @@ void WorkflowEngine::setScanAxis(int axis)
     m_scanAxis = axis;
 }
 
+void WorkflowEngine::setLensAdjustInterval(int intervalMs)
+{
+    m_lensAdjustInterval = intervalMs;
+    if (intervalMs > 0) {
+        emit logMessage(tr("镜头调节间隔设置为: %1 ms (频率: %2 Hz)")
+            .arg(intervalMs)
+            .arg(1000.0 / intervalMs, 0, 'f', 1));
+    } else {
+        emit logMessage(tr("镜头调节间隔设置为: 全速调节"));
+    }
+}
+
+int WorkflowEngine::lensAdjustInterval() const
+{
+    return m_lensAdjustInterval;
+}
+
+void WorkflowEngine::onLensAdjustTimeout()
+{
+    if (m_state != Measuring && m_state != AdjustingFocus) return;
+
+    if (!m_autoFocusEnabled || !m_lens || !m_lens->isConnected()) return;
+
+    double offset = m_lens->offset();
+    double actualDistance = m_latestSensorDistance + offset;
+    int focusValue = m_lens->currentFocusValue();
+
+    emit logMessage(tr("【节流】传感器距离: %1 mm, 实际距离: %2 mm, 焦距值: %3")
+        .arg(m_latestSensorDistance, 0, 'f', 2)
+        .arg(actualDistance, 0, 'f', 2)
+        .arg(focusValue));
+
+    if (m_continuousMode) {
+        setState(WaitingForAxis);
+        processNextPoint();
+    }
+}
+
 /**
  * @brief 传感器数据接收处理
  * @param data 接收到的数据
@@ -332,28 +375,48 @@ void WorkflowEngine::onSensorDataReceived(const QByteArray &data)
 
     m_lastDistance = distance;
     m_pendingDistance = distance;
+    m_latestSensorDistance = distance;
 
-    int focusValue = 0;
     if (m_autoFocusEnabled && m_lens && m_lens->isConnected()) {
-        double offset = m_lens->offset();
-        double actualDistance = distance + offset;
-        m_lens->setFocusByDistance(actualDistance);
-        focusValue = m_lens->currentFocusValue();
-        emit logMessage(tr("传感器距离: %1 mm, 轴位置: %2 mm, 偏移: %3 mm, 实际距离: %4 mm, 焦距值: %5")
-            .arg(distance, 0, 'f', 2)
-            .arg(m_currentAxisPos, 0, 'f', 2)
-            .arg(offset, 0, 'f', 2)
-            .arg(actualDistance, 0, 'f', 2)
-            .arg(focusValue));
+        if (m_lensAdjustInterval > 0) {
+            if (!m_lensAdjustTimer->isActive()) {
+                double offset = m_lens->offset();
+                double actualDistance = distance + offset;
+                m_lens->setFocusByDistance(actualDistance);
+                int focusValue = m_lens->currentFocusValue();
+                emit logMessage(tr("传感器距离: %1 mm, 轴位置: %2 mm, 偏移: %3 mm, 实际距离: %4 mm, 焦距值: %5")
+                    .arg(distance, 0, 'f', 2)
+                    .arg(m_currentAxisPos, 0, 'f', 2)
+                    .arg(offset, 0, 'f', 2)
+                    .arg(actualDistance, 0, 'f', 2)
+                    .arg(focusValue));
+                m_lensAdjustTimer->start(m_lensAdjustInterval);
+            } else {
+                emit logMessage(tr("【跳过】传感器距离: %1 mm (等待%2ms)")
+                    .arg(distance, 0, 'f', 2)
+                    .arg(m_lensAdjustInterval));
+            }
+        } else {
+            double offset = m_lens->offset();
+            double actualDistance = distance + offset;
+            m_lens->setFocusByDistance(actualDistance);
+            int focusValue = m_lens->currentFocusValue();
+            emit logMessage(tr("传感器距离: %1 mm, 轴位置: %2 mm, 偏移: %3 mm, 实际距离: %4 mm, 焦距值: %5")
+                .arg(distance, 0, 'f', 2)
+                .arg(m_currentAxisPos, 0, 'f', 2)
+                .arg(offset, 0, 'f', 2)
+                .arg(actualDistance, 0, 'f', 2)
+                .arg(focusValue));
+        }
     }
 
-    emit distanceMeasured(distance, focusValue);
+    emit distanceMeasured(distance, m_autoFocusEnabled && m_lens ? m_lens->currentFocusValue() : 0);
 
     if (m_continuousMode) {
         ScanPoint point;
         point.position = m_currentAxisPos;
         point.measuredDistance = distance;
-        point.focusValue = focusValue;
+        point.focusValue = m_lens ? m_lens->currentFocusValue() : 0;
         m_results.append(point);
 
         emit scanPointCompleted(point);
@@ -366,14 +429,16 @@ void WorkflowEngine::onSensorDataReceived(const QByteArray &data)
             emit scanFinished();
             emit logMessage(tr("连续扫描完成，共 %1 个点位").arg(m_results.size()));
         } else {
-            setState(WaitingForAxis);
-            processNextPoint();
+            if (m_lensAdjustInterval <= 0) {
+                setState(WaitingForAxis);
+                processNextPoint();
+            }
         }
     } else {
         ScanPoint point;
         point.position = m_currentAxisPos;
         point.measuredDistance = distance;
-        point.focusValue = focusValue;
+        point.focusValue = m_lens ? m_lens->currentFocusValue() : 0;
         m_results.append(point);
 
         emit scanPointCompleted(point);

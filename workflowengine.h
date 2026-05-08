@@ -151,6 +151,18 @@ public:
      */
     void setScanAxis(int axis);
 
+    /**
+     * @brief 设置镜头调节间隔
+     * @param intervalMs 调节间隔（毫秒），0表示全速调节
+     */
+    void setLensAdjustInterval(int intervalMs);
+
+    /**
+     * @brief 获取镜头调节间隔
+     * @return 调节间隔（毫秒）
+     */
+    int lensAdjustInterval() const;
+
 signals:
     /**
      * @brief 状态改变信号
@@ -292,6 +304,15 @@ private:
 
     /** @brief 待处理距离值 */
     double m_pendingDistance;
+
+    /** @brief 镜头调节间隔（毫秒） */
+    int m_lensAdjustInterval;
+
+    /** @brief 镜头调节定时器 */
+    QTimer *m_lensAdjustTimer;
+
+    /** @brief 最近的传感器数据 */
+    double m_latestSensorDistance;
 };
 
 #endif
